@@ -69,34 +69,34 @@ class OnePieceProblem(search.Problem):
         # TODO can you explain the code here?
         actions = []
         offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        actions_per_ship = []
-        for m, (i, j) in enumerate(offsets):
+        actions_per_ship = []   # list of all possible actions per ship
+        
 
-            for k, (name, loc) in enumerate(state.pirate_ships.items()):
-                print(k)
-                combo = []
-                # Check if the ship is at the base (deposit available)
-                if state.base_location == loc and state.treasures_num > 0:
-                    combo.append(('deposit_treasures', name))
+        for k, (name, loc) in enumerate(state.pirate_ships.items()):
+            combo = []  # list of actions possible for a certain ship (atomic)
+            # Wait action is always available
+            combo.append(('wait', name))
 
-                # Iterating through possible 'sail' and 'collect' actions
-                next_location = (loc[0] + i, loc[1] + j)
-                print(next_location)
-                if legal_move(next_location):
-                    print("got in")
-                    print(state.map[next_location[0]][next_location[1]])
-                    if state.map[next_location[0]][next_location[1]] == 'S':
-                        combo.append(("sail", name, next_location))
-                    elif state.map[next_location[0]][next_location[1]] == 'I':
-                        combo.append(("collect_treasure", name, find_key_by_value(state.treasures, next_location)))
+            # Check if the ship is at the base (deposit available)
+            if state.base_location == loc and state.treasures_num > 0:
+                combo.append(('deposit_treasures', name))
 
-                if m != 0:
-                    combo.append(('wait', name))
-                    actions_per_ship[k].append(combo)
-            print(actions_per_ship)
-            pro = list(product(*(aps for aps in actions_per_ship)))
-
-        return pro
+            # Going over each possible cell to move (horizontally and vertically)
+            for m, (i, j) in enumerate(offsets):
+                if abs(i) != abs(j):    # diagonal is an illegal move (-1,1). (when exploring 'sail' options, staying in the same cell is not an option)
+                    # Iterating through possible 'sail' and 'collect' actions
+                    next_location = (loc[0] + i, loc[1] + j)
+                    print(next_location)
+                    if legal_move(next_location):
+                        print("got in")
+                        print(state.map[next_location[0]][next_location[1]])
+                        if state.map[next_location[0]][next_location[1]] == 'S':
+                            combo.append(("sail", name, next_location))
+                        elif state.map[next_location[0]][next_location[1]] == 'I':
+                            combo.append(("collect_treasure", name, find_key_by_value(state.treasures, next_location)))
+            actions_per_ship.append(combo)
+            product = list(product(*(aps for aps in actions_per_ship)))
+        return product
 
     def result(self, state, action):
         """Return the state that results from executing the given
