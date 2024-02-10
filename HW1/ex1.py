@@ -17,6 +17,7 @@ def test(ships):
 
 
 State = namedtuple('State', ['map', 'pirate_ships', 'treasures', 'marine_ships', 'base_location', 'treasures_num'])
+# TODO i think about adding to State: a timestamp and the place of each marine_ship in the specific timestamp
 
 
 class OnePieceProblem(search.Problem):
@@ -36,30 +37,36 @@ class OnePieceProblem(search.Problem):
         state_params.append(0)
 
         initial_state = State(*state_params)
-        search.Problem.__init__(self, initial_state)
+        search.Problem.__init__(self, initial_state)  # TODO check note bellow:
+        # shouldn't we also define goal state/s? it should  be all possible states were all treasures are collected.
+        # I know that there is a goal test,but we should keep this note in case we needed it
 
     def actions(self, state: namedtuple):
-        """
-        Indicates if a given location is within the map.
-
-        Parameters:
-        location (tuple of integers): a tuple of two integers that defines the location on the map
-
-        Returns:
-        boolean: if the location is within the map, returns True. Returns False otherwise
-        """
+        """Returns all the actions that can be executed in the given
+                state. The result should be a tuple (or other iterable) of actions
+                as defined in the problem description file"""
 
         def legal_move(location):
-            row_length = len(state.map[0])
-            col_length = len(state.map)
-            return (0 <= location[0] < col_length and 0 <= location[1] < row_length)
+            """
+                   Indicates if a given location is within the map.
 
-        def find_key_by_value(dictionary, value):
+                   Parameters:
+                   location (tuple of integers): a tuple of two integers that defines the location on the map
+
+                   Returns:
+                   boolean: if the location is within the map, returns True. Returns False otherwise
+            """
+            rows_num = len(state.map)
+            cols_num = len(state.map[0])
+            return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
+
+        def find_key_by_value(dictionary, value): # TODO what is this for?
             for key, val in dictionary.items():
                 if val == value:
                     return key
             return None
 
+        # TODO can you explain the code here?
         actions = []
         offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         actions_per_ship = []
