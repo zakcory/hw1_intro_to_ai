@@ -1,0 +1,2 @@
+marine_route_cycle = marine_route_input + marine_route_input[len(marine_route_input)-2:0:-1]
+marine_at_t = marine_route_cycle[ t%len(marine_route_cycle) ] # t - timestamp 
