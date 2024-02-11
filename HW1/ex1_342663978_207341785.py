@@ -63,7 +63,7 @@ class OnePieceProblem(search.Problem):
 
                 treasures_on_ships_dict = {}
                 for ship_name in self.pirate_ships_names:
-                    treasures_on_ships_dict.update({ship_name: []})
+                    treasures_on_ships_dict.update({ship_name: list([])})
                 init_state_params.append(treasures_on_ships_dict)  # 'treasures_on_ships_dict'- dict{ ship_name :
                 #                                                   list of treasures_names (at most two treasures) ...}
 
@@ -133,14 +133,14 @@ class OnePieceProblem(search.Problem):
 
         for action_command in self.all_actions_names: # check each command
 
-            for ship_name, ship_loc in enumerate(state.pirate_ships_loc_dict.items()):
+            for ship_name, ship_loc in state.pirate_ships_loc_dict.items():
 
                 if action_command == "collect_treasure":
                     # first check if ship can collect more treasures :
                     ship_treasure_num = len(state.treasures_on_ships_dict.get(ship_name))
                     if ship_treasure_num < 2 :
                         # then check if there is a nearby uncollected treasure and add action as much as there is:
-                        for treasure,treasure_loc in enumerate(state.uncollected_treasures_loc_dict):
+                        for treasure,treasure_loc in state.uncollected_treasures_loc_dict.items():
                             if ((ship_loc[0]-1) <= treasure_loc[0] ) and ((ship_loc[1]-1) <= treasure_loc[1]
                                 ) and ( treasure_loc[0] <= (ship_loc[0]+1)) and (treasure_loc[1]<=(ship_loc[1]+1)):
                                 actions.append(("collect_treasure", ship_name, treasure)) # add action
@@ -154,14 +154,14 @@ class OnePieceProblem(search.Problem):
                             if treasure is not None:
                                 there_is_treasure_on_ship = True
                         if there_is_treasure_on_ship:  # if there is treasure on ship then deposit it
-                            actions.append(("deposit_treasures", ship_name))
+                            actions.append(("deposit_treasures", ship_name)) # add action
 
                 elif action_command == "sail":
                     all_sail_locations = self.sail_locations(ship_loc,ship_name)
-                    actions.extend(all_sail_locations)
+                    actions.extend(all_sail_locations) # add list of actions
 
                 elif action_command == "wait":
-                    actions.append( ("wait", ship_name) )
+                    actions.append( ("wait", ship_name) ) # add action
 
         return tuple(actions)
 
@@ -173,7 +173,7 @@ class OnePieceProblem(search.Problem):
             pass
 
     def goal_test(self, state):
-        """ Given a state, checks if this is the goal state.
+        """Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
         return len(state.uncollected_treasures_loc_dict) == 0
 
@@ -230,4 +230,4 @@ if __name__ == '__main__':
 # - sometimes we can move to a loc even if there is marine if we have no treasure on ships.
 # - when collecting a treasure on ship make sure to remove it from uncollected, and if it was forfeited to marines don't
 # forget to add it to uncollected again.
-# -
+# - there is node.depth attribute in node which can be used as timestamp
