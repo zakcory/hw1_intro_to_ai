@@ -17,7 +17,7 @@ def test(ships): # TODO : what is this for?
 
 
 State_tuple = namedtuple('State_tuple', ['pirate_ships_loc', 'treasures_on_ships_dict',
-                             'not_collected_treasures_loc', 'collected_treasures_in_base_names', 'marine_ships_loc'])
+                             'uncollected_treasures_loc', 'collected_treasures_in_base_names', 'marine_ships_loc'])
 
 
 class State(State_tuple):  # state must be hashable - so we need to make it hashable
@@ -29,7 +29,8 @@ class OnePieceProblem(search.Problem):
     """This class implements a medical problem according to problem description file
         contain attributes: self.map, self.pirate_ships_names, self.treasures_loc, self.marine_ships_input_route,
          self.marine_route_cycle, self.base_loc
-        contain methods:__init__, marine_ship_loc_at_t,
+        contain methods: marine_ship_loc_at_t,  actions(self, state: namedtuple), result(self, state, action),
+        goal_test(self, state), h, h1, h2
     """
 
     def __init__(self, initial):
@@ -54,7 +55,7 @@ class OnePieceProblem(search.Problem):
 
             elif k == "treasures":
                 self.treasures_loc = v
-                init_state_params.append(v)  # not_collected_treasures_loc
+                init_state_params.append(v)  # uncollected_treasures_loc
                 init_state_params.append(set())  # 'collected_treasures_in_base_names'
 
             elif k == "marine_ships":
@@ -150,12 +151,29 @@ class OnePieceProblem(search.Problem):
     def goal_test(self, state):
         """ Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
-        return len(state.not_collected_treasures_loc) == 0
+        return len(state.uncollected_treasures_loc) == 0
 
     def h(self, node):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
+        return 0
+
+    def h_1(self, node):
+        """ This is the heuristic. It gets a node (not a state,
+        state can be accessed via node.state)
+        and returns a number of uncollected treasures divided by the number of pirates."""
+        state = node.state
+        uncollected_treasures_num = len(state.uncollected_treasures_loc)
+        pirates_num = len(state.pirate_ships_loc)
+        return uncollected_treasures_num/pirates_num
+
+    def h_2(self, node):
+        """ This is the heuristic. It gets a node (not a state,
+        state can be accessed via node.state)
+        Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
+         for each treasure, divided by the number of pirates. If there is a treasure which all the adjacent cells are
+          islands – return infinity. """
         return 0
 
     """Feel free to add your own functions
