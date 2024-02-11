@@ -1,4 +1,4 @@
-import ex1
+import ex1_342663978_207341785
 import search
 import time
 
@@ -56,7 +56,7 @@ def solve_problems(problems):
     solved = 0
     for problem in problems:
         try:
-            p = ex1.create_onepiece_problem(problem)
+            p = ex1_342663978_207341785.create_onepiece_problem(problem)
         except Exception as e:
             print("Error creating problem: ", e)
             return None
@@ -70,7 +70,7 @@ def solve_problems(problems):
 
 
 def main():
-    print(ex1.ids)
+    print(ex1_342663978_207341785.ids)
     """Here goes the input you want to check"""
     problems = [
         {
