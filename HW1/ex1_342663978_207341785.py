@@ -6,6 +6,9 @@ from itertools import product
 
 ids = ["342663978", "207341785"]
 
+State_tuple = namedtuple('State_tuple', ['pirate_ships_loc_dict', 'treasures_on_ships_dict',
+                             'uncollected_treasures_loc_dict', 'collected_treasures_in_base_names_set',
+                                         'marine_ships_loc_dict'])
 
 def test(ships): # TODO : what is this for?
     all_actions = []
@@ -15,20 +18,28 @@ def test(ships): # TODO : what is this for?
             loc = v
             print("ship name: ", name,", loc: ", (v[0] - 1, v[1]))
 
-
-State_tuple = namedtuple('State_tuple', ['pirate_ships_loc', 'treasures_on_ships_dict',
-                             'uncollected_treasures_loc', 'collected_treasures_in_base_names', 'marine_ships_loc'])
-
+def find_key_by_value(dictionary, value):
+    """ Find key in the dictionary by its specific value and return it if exists else return None """
+    for key, val in dictionary.items():
+        if val == value:
+            return key
+    return None
 
 class State(State_tuple):  # state must be hashable - so we need to make it hashable
-    def __hash__(self):  # TODO : needs implementation
-        return len(self.collected_treasures_in_base_names)
+    def __hash__(self):  # TODO : check if implementation is good - the teacher said we can use str as hash
+        String_state = str(self)
+        return hash(String_state)
+
+
+
 
 
 class OnePieceProblem(search.Problem):
     """This class implements a medical problem according to problem description file
+
         contain attributes: self.map, self.pirate_ships_names, self.treasures_loc, self.marine_ships_input_route,
-         self.marine_route_cycle, self.base_loc
+         self.marine_route_cycle, self.base_loc, self.all_actions_names
+
         contain methods: marine_ship_loc_at_t,  actions(self, state: namedtuple), result(self, state, action),
         goal_test(self, state), h, h1, h2
     """
@@ -37,7 +48,10 @@ class OnePieceProblem(search.Problem):
         """Don't forget to implement the goal test
         You should change the initial to your own representation.
         search.Problem.__init__(self, initial) creates the root node"""
+
         # Adding all the parameters to the list to then pass on the list to the constructor
+        self.all_actions_names = ["collect_treasure", "deposit_treasures", "sail", "wait"]
+
         init_state_params = []
         self.map = None
         for k, v in initial.items():
@@ -45,21 +59,21 @@ class OnePieceProblem(search.Problem):
                 self.map = v
             elif k == "pirate_ships":
                 self.pirate_ships_names = list(v.keys())
-                init_state_params.append(v)  # 'pirate_ships_loc'
+                init_state_params.append(v)  # 'pirate_ships_loc_dict'
 
                 treasures_on_ships_dict = {}
                 for ship_name in self.pirate_ships_names:
                     treasures_on_ships_dict.update({ship_name: [None, None]})
-                init_state_params.append(treasures_on_ships_dict)  # 'treasures_on_ships_dict'- dict{ship_name : list of treasures_names
-                #                                                                          (at most two treasures) ...}
+                init_state_params.append(treasures_on_ships_dict)  # 'treasures_on_ships_dict'- dict{ ship_name :
+                #                                                   list of treasures_names (at most two treasures) ...}
 
             elif k == "treasures":
                 self.treasures_loc = v
-                init_state_params.append(v)  # uncollected_treasures_loc
-                init_state_params.append(set())  # 'collected_treasures_in_base_names'
+                init_state_params.append(v)  # uncollected_treasures_loc_dict
+                init_state_params.append(set())  # 'collected_treasures_in_base_names_set'
 
             elif k == "marine_ships":
-                self.marine_ships_input_route = v  # TODO not sure if we need this variable
+                self.marine_ships_input_route = v  # TODO not sure if we need this variable - maybe delete it later
 
                 init_loc = dict()
                 self.marine_route_cycle = dict()  # will use this to keep track of the marine locations at time t
@@ -69,79 +83,83 @@ class OnePieceProblem(search.Problem):
                     self.marine_route_cycle.update({key: route})
                     init_loc.update({key: route[0]})
 
-                init_state_params.append(init_loc)  # 'marine_ships_loc'
+                init_state_params.append(init_loc)  # 'marine_ships_loc_dict'
 
         self.base_loc = list(initial['pirate_ships'].values())[0]
 
         initial_state = State(*init_state_params)
-        search.Problem.__init__(self, initial_state)  # TODO check note bellow:
-        # shouldn't we also define goal state/s? it should  be all possible states were all treasures are collected.
-        # I know that there is a goal test,but we should keep this note in case we needed it
+        search.Problem.__init__(self, initial_state)
 
-    def marine_ship_loc_at_t(self, marine_ship_name, timestamp):
+    def marine_ship_loc_at_t(self, marine_ship_name: str, timestamp: int):
         """ Returns the location of the marine_ship_name at given timestamp"""
         cycle_route = list(self.marine_route_cycle.get(marine_ship_name))
         return cycle_route[timestamp % len(cycle_route)]
 
-    def actions(self, state: namedtuple):
-        """Returns all the actions that can be executed in the given
-                state. The result should be a tuple (or other iterable) of actions
-                as defined in the problem description file"""
-        #
-        # def legal_move(location):
-        #     """
-        #            Indicates if a given location is within the map.
-        #
-        #            Parameters:
-        #            location (tuple of integers): a tuple of two integers that defines the location on the map
-        #
-        #            Returns:
-        #            boolean: if the location is within the map, returns True. Returns False otherwise
-        #     """
-        #     rows_num = len(state.map)
-        #     cols_num = len(state.map[0])
-        #     return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
-        #
-        # def find_key_by_value(dictionary, value):  # TODO what is this for?
-        #     for key, val in dictionary.items():
-        #         if val == value:
-        #             return key
-        #     return None
-        #
-        # # TODO can you explain the code here?
-        # actions = []
-        # offsets = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        # actions_per_ship = []   # list of all possible actions per ship
-        #
-        #
-        # for k, (name, loc) in enumerate(state.pirate_ships.items()):
-        #     combo = []  # list of actions possible for a certain ship (atomic)
-        #     # Wait action is always available
-        #     combo.append(('wait', name))
-        #
-        #     # Check if the ship is at the base (deposit available)
-        #     if state.base_location == loc and state.treasures_num > 0:
-        #         combo.append(('deposit_treasures', name))
-        #
-        #     # Going over each possible cell to move (horizontally and vertically)
-        #     for m, (i, j) in enumerate(offsets):
-        #         if abs(i) != abs(j):    # diagonal is an illegal move (-1,1). (when exploring 'sail' options, staying in the same cell is not an option)
-        #             # Iterating through possible 'sail' and 'collect' actions
-        #             next_location = (loc[0] + i, loc[1] + j)
-        #             print(next_location)
-        #             if legal_move(next_location):
-        #                 print("got in")
-        #                 print(state.map[next_location[0]][next_location[1]])
-        #                 if state.map[next_location[0]][next_location[1]] == 'S':
-        #                     combo.append(("sail", name, next_location))
-        #                 elif state.map[next_location[0]][next_location[1]] == 'I':
-        #                     combo.append(("collect_treasure", name, find_key_by_value(state.treasures, next_location)))
-        #     actions_per_ship.append(combo)
-        #     product = list(product(*(aps for aps in actions_per_ship)))
-        # return product
-        return
+    def legal_move(self, location):
+        """
+            Indicates if a given location is within the map.
 
-    def result(self, state, action):
+            Parameters:
+            location (tuple of integers): a tuple of two integers that defines the location on the map
+
+            Returns:
+            boolean: if the location is within the map, returns True. Returns False otherwise
+        """
+        rows_num = len(self.map)
+        cols_num = len(self.map[0])
+        return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
+
+    def sail_locations(self, loc, ship_name) : # TODO - make sue check in node if cell contain marine in next timestamp
+        """ Returns legal tuple (as described in file)
+        of all the near sail actions to locations within the map that this ship can sail to."""
+        locations_array = []
+        for i in range(loc[0]-1, loc[0]+2):
+            for j in range(loc[1]-1, loc[1]+2):
+                if (i!=j) and self.legal_move([i,j]):
+                    if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
+                        locations_array.append( ("sail", ship_name, (i,j) ) )
+        return locations_array
+
+
+    def actions(self, state: namedtuple):
+        """Returns all the actions that can be executed in the given state.
+         The result should be a tuple (or other iterable) of actions as defined in the problem description file
+            Examples of a Valid Action:
+                If you have one ship: ((“wait”, “pirate_1”), )
+                If you have 2 ships: ((“wait”, “pirate_1”),(“move”, “pirate_2”, (1, 2)))
+            Must return a tuple
+        """
+        actions = []
+
+        for action_command in self.all_actions_names: # check each command
+            for ship_name, loc in enumerate(state.pirate_ships_loc_dict.items()):
+
+                if action_command == "collect_treasure":
+                    pass # TODO
+
+                elif action_command == "deposit_treasures":
+                    # Check if the ship is at the base (deposit available)
+                    ship_treasures = state.treasures_on_ships_dict.get(ship_name)
+
+                    if self.base_loc == loc:
+                        there_is_treasure_on_ship = False
+                        for treasure in ship_treasures:
+                            if treasure is not None:
+                                there_is_treasure_on_ship = True
+
+                        if there_is_treasure_on_ship:
+                            actions.append(('deposit_treasures`', ship_name))
+
+                elif action_command == "sail":
+                    all_sail_locations = self.sail_locations(loc,ship_name)
+                    actions.extend(all_sail_locations)
+
+                elif action_command == "wait":
+                    actions.append(tuple(["wait", ship_name]))
+
+        return tuple(actions)
+
+    def result(self, state, action): # TODO
         """Return the state that results from executing the given
         action in the given state. The action must be one of
         self.actions(state)."""
@@ -151,9 +169,9 @@ class OnePieceProblem(search.Problem):
     def goal_test(self, state):
         """ Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
-        return len(state.uncollected_treasures_loc) == 0
+        return len(state.uncollected_treasures_loc_dict) == 0
 
-    def h(self, node):
+    def h(self, node):  # TODO
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
@@ -164,11 +182,11 @@ class OnePieceProblem(search.Problem):
         state can be accessed via node.state)
         and returns a number of uncollected treasures divided by the number of pirates."""
         state = node.state
-        uncollected_treasures_num = len(state.uncollected_treasures_loc)
-        pirates_num = len(state.pirate_ships_loc)
+        uncollected_treasures_num = len(state.uncollected_treasures_loc_dict)
+        pirates_num = len(state.pirate_ships_loc_dict)
         return uncollected_treasures_num/pirates_num
 
-    def h_2(self, node):
+    def h_2(self, node): # TODO
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -

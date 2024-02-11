@@ -91,6 +91,9 @@ class Node:
         self.action = action
         self.path_cost = path_cost
         self.depth = 0
+
+        self.timestamp = 0
+
         if parent:
             self.depth = parent.depth + 1
 
@@ -150,5 +153,6 @@ def astar_search(problem, h=None):
     f = memoize(lambda n: n.path_cost + h(n), 'f')
 
     # TODO: Implement the rest of the A* search algorithm
+    # TODO: if there is a treasure island that is unreachable then return None , check that first!!
 
     return None
