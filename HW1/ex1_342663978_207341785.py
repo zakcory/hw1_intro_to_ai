@@ -115,7 +115,7 @@ class OnePieceProblem(search.Problem):
         locations_array = []
         for i in range(loc[0]-1, loc[0]+2):
             for j in range(loc[1]-1, loc[1]+2):
-                if (i!=j) and self.legal_move([i,j]):
+                if (i, j)!= (loc[0],loc[1]) and self.legal_move([i,j]):
                     if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
                         locations_array.append( ("sail", ship_name, (i,j) ) )
         return locations_array
