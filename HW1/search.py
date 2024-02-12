@@ -15,7 +15,7 @@ import math
 import random
 import sys
 import bisect
-
+import ex1_342663978_207341785
 infinity = float('inf')
 
 # ______________________________________________________________________________
@@ -153,6 +153,12 @@ def astar_search(problem, h=None):
     f = memoize(lambda n: n.path_cost + h(n), 'f')
 
     # TODO: Implement the rest of the A* search algorithm
-    # TODO: if there is a treasure island that is unreachable then return None , check that first!!
+    # if there is a treasure island that is unreachable then return None , check that first!!
+    reachability_check = True
+    for treasures_loc in problem.get_treasures_locs().values():
+        reachability_check = reachability_check and ex1_342663978_207341785.OnePieceProblem.sail_locations(problem,
+                                                                    treasures_loc,"", True)
+    if not reachability_check:
+        return
 
     return None

@@ -73,7 +73,6 @@ class OnePieceProblem(search.Problem):
 
         # Adding all the parameters to the list to then pass on the list to the constructor
         self.all_actions_names = ["collect_treasure", "deposit_treasures", "sail", "wait"]
-
         init_state_params = []
         self.map = None
         for k, v in initial.items():
@@ -133,14 +132,18 @@ class OnePieceProblem(search.Problem):
         cols_num = len(self.map[0])
         return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
 
-    def sail_locations(self, loc, ship_name) :
+    def sail_locations(self, loc, ship_name, just_check_reachability = False) :
         """ Returns legal tuple (as described in file)
         of all the near sail actions to locations within the map that this ship can sail to."""
         locations_array = []
+
+
         for i in range(loc[0]-1, loc[0]+2):
             for j in range(loc[1]-1, loc[1]+2):
                 if (i, j)!= (loc[0],loc[1]) and self.legal_move([i,j]):
                     if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
+                        if just_check_reachability :
+                            return True
                         locations_array.append( ("sail", ship_name, (i,j) ) )
         return locations_array
 
@@ -289,6 +292,18 @@ class OnePieceProblem(search.Problem):
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
 
+    def get_map(self):
+        return self.map
+    def get_pirate_ships_names(self):
+        return self.pirate_ships_names
+    def get_treasures_loc(self):
+        return self.treasures_loc
+    def get_marine_ships_input_route(self):
+        return self.marine_ships_input_route
+    def get_marine_route_cycle(self):
+        return self.marine_route_cycle
+    def get_base_loc(self):
+        return self.base_loc
 
 def create_onepiece_problem(game):
     return OnePieceProblem(game)
@@ -318,3 +333,4 @@ if __name__ == '__main__':
 # forget to add it to uncollected again.
 # - there is node.depth attribute in node which can be used as timestamp
 # - make sure check in node if cell contain marine in next turn
+# TODO : the actions are atomic - relate to just one ship
