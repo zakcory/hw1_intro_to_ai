@@ -143,14 +143,21 @@ def graph_search(problem, fringe):
     """ Search through the successors of a problem to find a goal. The argument fringe should be an empty queue.
      If two paths reach a state, only use the best one."""
     closed = {}
+    distance_set = {}
     fringe.append(Node(problem.initial))
     while fringe:
         node = fringe.pop()
-        if problem.goal_test(node.state):
-            return node
-        if node.state not in closed:
+
+        g_n = node.path_cost
+        if node.state not in distance_set:
+            distance_set[node.state] = g_n
+        if node.state not in closed or g_n < distance_set[node.state]:
             closed[node.state] = True
             fringe.extend(node.expand(problem))
+            distance_set[node.state] = g_n
+
+            if problem.goal_test(node.state):
+                return node
     return None
 
 def best_first_graph_search(problem,f):
@@ -161,7 +168,7 @@ def astar_search(problem, h=None):
     You need to specify the h function when you call astar_search, or
     else in your Problem subclass."""
     # Memoize the heuristic function for better performance
-    h = memoize(h or problem.h_1, 'h')
+    h = memoize(h or problem.h, 'h_1')
 
     # Function to calculate f(n) = g(n) + h(n)
     # Memoize this function for better performance

@@ -75,11 +75,14 @@ class OnePieceProblem(search.Problem):
         self.all_actions_names = ["collect_treasure", "deposit_treasures", "sail", "wait"]
         init_state_params = []
         self.map = None
+        self.turn_timestamp = 1
         for k, v in initial.items():
             if k == "map":
                 self.map = v
             elif k == "pirate_ships":
-                self.pirate_ships_names = list(v.keys())
+                self.pirate_ships_names = set(v.keys())
+                self.pirates_need_action_bool = self.pirate_ships_names.copy()
+
                 init_state_params.append(v)  # 'pirate_ships_loc_dict'
 
                 treasures_on_ships_dict = {}
@@ -196,7 +199,14 @@ class OnePieceProblem(search.Problem):
         action in the given state. The action must be one of
         self.actions(state)."""
 
-        new_turn = state.turn_num + 1 # new turn number
+        ship_name = action[1]
+        new_turn = self.turn_timestamp
+        self.pirates_need_action_bool.discard(ship_name)
+        if self.pirates_need_action_bool:
+            self.turn_timestamp += 1
+            new_turn = self.turn_timestamp # new turn number just after all ships did action
+            self.pirates_need_action_bool = self.pirate_ships_names.copy() # now a new turn so we need to check again
+
 
         legal_actions_set = self.actions(state) # all legal actions the current state can do
 
@@ -235,7 +245,6 @@ class OnePieceProblem(search.Problem):
 
             # now check the which one is the action_command and return new state according
             if action_command == "collect_treasure": # (“collect_treasure”, pirate_ship, “treasure_name”).
-                ship_name = action[1]
                 # if there is no marine encounter at the end of turn then we can collect it without confiscating
                 if not (ship_name in ships_encountered_marine_list):
                     ship_treasure_list = state.treasures_on_ships_dict.get(ship_name).copy() # list of ship's treasures
@@ -245,7 +254,6 @@ class OnePieceProblem(search.Problem):
                     new_uncollected_islands_loc_dict.pop(action[2], new_uncollected_islands_loc_dict.get(action[2]))
 
             elif action_command == "deposit_treasures":  # action = (“deposit_treasures”, “pirate_ship”)
-                ship_name = action[1]
                 # check if ship in base_loc
                 if new_pirate_ships_loc_dict.get(ship_name) == self.base_loc:
                     for treasure_to_deposit in new_treasures_on_ships_dict.get(ship_name):
@@ -257,7 +265,7 @@ class OnePieceProblem(search.Problem):
             return State(new_pirate_ships_loc_dict, new_treasures_on_ships_dict,
                                       new_uncollected_islands_loc_dict,
                                       new_collected_treasures_in_base_names_set,
-                                      new_marine_location_dict, len(new_collected_treasures_in_base_names_set),
+                                      new_marine_location_dict, len(new_uncollected_islands_loc_dict),
                          new_turn)
         else:
             return State(state[0],state[1],state[2],state[3],state[4],state[5],new_turn)
@@ -265,13 +273,14 @@ class OnePieceProblem(search.Problem):
     def goal_test(self, state):
         """Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
-        return state.num_not_deposited_treasures == 0
+        test_flag = state.num_not_deposited_treasures == 0
+        return test_flag
 
     def h(self, node):  # TODO
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
-        return 0
+        return self.h_1(node)
 
     def h_1(self, node):
         """ This is the heuristic. It gets a node (not a state,
@@ -280,6 +289,8 @@ class OnePieceProblem(search.Problem):
         state = node.state
         uncollected_treasures_num = len(state.uncollected_island_loc_dict)
         pirates_num = len(state.pirate_ships_loc_dict)
+        # print(node.state,"h_1 ", uncollected_treasures_num/pirates_num)
+
         return uncollected_treasures_num/pirates_num
 
     def h_2(self, node): # TODO
@@ -325,6 +336,7 @@ def main():
     }
     pr = OnePieceProblem(test)
     print(pr.actions(pr.initial))
+
 
 
 if __name__ == '__main__':

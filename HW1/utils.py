@@ -354,7 +354,7 @@ def memoize(fn, slot=None, maxsize=32):
     If slot is specified, store result in that slot of first argument.
     If slot is false, use lru_cache for caching the values."""
     if slot:
-        def memoized_fn(obj, *args):
+        def memoized_fn(obj, *args): # this will be used
             if hasattr(obj, slot):
                 return getattr(obj, slot)
             else:
