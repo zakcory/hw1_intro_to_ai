@@ -168,7 +168,7 @@ def astar_search(problem, h=None):
     You need to specify the h function when you call astar_search, or
     else in your Problem subclass."""
     # Memoize the heuristic function for better performance
-    h = memoize(h or problem.h, 'h_1')
+    h = memoize(h or problem.h, 'h')
 
     # Function to calculate f(n) = g(n) + h(n)
     # Memoize this function for better performance
