@@ -139,15 +139,14 @@ class OnePieceProblem(search.Problem):
         """ Returns legal tuple (as described in file)
         of all the near sail actions to locations within the map that this ship can sail to."""
         locations_array = []
-
-
-        for i in range(loc[0]-1, loc[0]+2):
-            for j in range(loc[1]-1, loc[1]+2):
-                if (i, j)!= (loc[0],loc[1]) and self.legal_move([i,j]):
-                    if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
-                        if just_check_reachability :
-                            return True
-                        locations_array.append( ("sail", ship_name, (i,j) ) )
+        row = loc[0]
+        col = loc[1]
+        for (i,j) in [(row-1,col), (row+1,col), (row,col-1), (row,col+1)]:
+            if self.legal_move((i,j)):
+                if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
+                    if just_check_reachability:
+                        return True
+                    locations_array.append( ("sail", ship_name, (i,j) ) )
         return locations_array
 
     def actions(self, state: namedtuple):
