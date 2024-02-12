@@ -182,6 +182,7 @@ def astar_search(problem, h=None):
         reachability_check = reachability_check and problem.sail_locations(
                                                                     treasure_loc,"", True)
         if not reachability_check: # if there is unreachable island then h = infinity
+            # print("unreachable")
             return None
 
     # now implement A*
