@@ -92,8 +92,6 @@ class Node:
         self.path_cost = path_cost
         self.depth = 0
 
-        self.timestamp = 0
-
         if parent:
             self.depth = parent.depth + 1
 
@@ -101,7 +99,8 @@ class Node:
         return "<Node {}>".format(self.state)
 
     def __lt__(self, node):
-        return self.state < node.state
+        # return self.state < node.state
+        return self.state.num_not_deposited_treasures < node.state.num_not_deposited_treasures
 
     def expand(self, problem):
         """List the nodes reachable in one step from this node."""
@@ -140,13 +139,29 @@ class Node:
 
 # ______________________________________________________________________________
 
+def graph_search(problem, fringe):
+    """ Search through the successors of a problem to find a goal. The argument fringe should be an empty queue.
+     If two paths reach a state, only use the best one."""
+    closed = {}
+    fringe.append(Node(problem.initial))
+    while fringe:
+        node = fringe.pop()
+        if problem.goal_test(node.state):
+            return node
+        if node.state not in closed:
+            closed[node.state] = True
+            fringe.extend(node.expand(problem))
+    return None
+
+def best_first_graph_search(problem,f):
+    return graph_search(problem, PriorityQueue(min,f))
 
 def astar_search(problem, h=None):
     """A* search is best-first graph search with f(n) = g(n)+h(n).
     You need to specify the h function when you call astar_search, or
     else in your Problem subclass."""
     # Memoize the heuristic function for better performance
-    h = memoize(h or problem.h, 'h')
+    h = memoize(h or problem.h_1, 'h')
 
     # Function to calculate f(n) = g(n) + h(n)
     # Memoize this function for better performance
@@ -155,10 +170,14 @@ def astar_search(problem, h=None):
     # TODO: Implement the rest of the A* search algorithm
     # if there is a treasure island that is unreachable then return None , check that first!!
     reachability_check = True
-    for treasures_loc in problem.get_treasures_locs().values():
+    all_treasures_loc = ex1_342663978_207341785.OnePieceProblem.get_treasures_loc(problem)
+    for treasure_loc in all_treasures_loc.values():
         reachability_check = reachability_check and ex1_342663978_207341785.OnePieceProblem.sail_locations(problem,
-                                                                    treasures_loc,"", True)
-    if not reachability_check:
-        return
+                                                                    treasure_loc,"", True)
+        if not reachability_check: # if there is unreachable island then h = infinity
+            return infinity
 
-    return None
+    # TODO
+    # now implement A*
+
+    return best_first_graph_search(problem,f)

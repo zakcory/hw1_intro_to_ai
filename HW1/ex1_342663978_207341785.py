@@ -278,7 +278,7 @@ class OnePieceProblem(search.Problem):
         state can be accessed via node.state)
         and returns a number of uncollected treasures divided by the number of pirates."""
         state = node.state
-        uncollected_treasures_num = state.num_not_deposited_treasures
+        uncollected_treasures_num = len(state.uncollected_island_loc_dict)
         pirates_num = len(state.pirate_ships_loc_dict)
         return uncollected_treasures_num/pirates_num
 
@@ -287,6 +287,10 @@ class OnePieceProblem(search.Problem):
         Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
          for each treasure, divided by the number of pirates. If there is a treasure which all the adjacent cells are
          islands – return infinity. """
+        state = node.state
+
+        pirates_num = len(state.pirate_ships_loc_dict)
+
         return 0
 
     """Feel free to add your own functions

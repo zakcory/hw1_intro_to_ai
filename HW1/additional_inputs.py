@@ -52,9 +52,4 @@ problems = [
         'treasures': {'treasure_1': (2, 2), 'treasure_2': (2, 2), 'treasure_3': (3, 3)},
         'marine_ships': {'marine_1': [(0, 0), (0, 1), (0, 0), (1, 0), (2, 0)]}
     }
-
-
-
-
-
 ]
