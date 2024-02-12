@@ -7,16 +7,47 @@ from itertools import product
 ids = ["342663978", "207341785"]
 
 State_tuple = namedtuple('State_tuple', ['pirate_ships_loc_dict', 'treasures_on_ships_dict',
-                             'uncollected_treasures_loc_dict', 'collected_treasures_in_base_names_set',
-                                         'marine_ships_loc_dict'])
+                             'uncollected_island_loc_dict', 'collected_treasures_in_base_names_set',
+                                         'marine_ships_loc_dict', "num_not_deposited_treasures", "turn_num"])
 
-def test(ships): # TODO : what is this for?
-    all_actions = []
-    for ship in ships:
-        for k, v in ship.items():
-            name = k
-            loc = v
-            print("ship name: ", name,", loc: ", (v[0] - 1, v[1]))
+class State(State_tuple):  # state must be hashable - so we need to make it hashable
+    def __eq__(self, other):# TODO
+        if isinstance(other, State):
+            # self.state == other.state
+            if self.num_not_deposited_treasures != other.num_not_deposited_treasures: #6
+                return False
+            for k,v in self.pirate_ships_loc_dict.items(): # 1
+                if other.pirate_ships_loc_dict.get(k) != v:
+                    return False
+            for k,v in self.treasures_on_ships_dict.items(): # 2
+                other_v = other.treasures_on_ships_dict.get(k)
+                if len(other_v) != len(v):
+                    return False
+                else:
+                    for treasure in v:
+                        if treasure not in other_v:
+                            return False
+            if len(self.uncollected_island_loc_dict.keys()) != len(other.uncollected_island_loc_dict.keys()): # 3
+                return False
+            else:
+                for k in self.uncollected_island_loc_dict.keys():
+                    if not (k in other.uncollected_island_loc_dict.keys()):
+                        return False
+            if len(self.collected_treasures_in_base_names_set.copy().symmetric_difference(
+                    other.collected_treasures_in_base_names_set) ) > 0:                                      #4
+                return False
+            for k,v in self.marine_ships_loc_dict.items(): #5
+                other_v = other.marine_ships_loc_dict.get(k)
+                if not (other_v is None):
+                    if  v != other_v:
+                        return False
+            return True
+        else:
+            return False
+
+    def __hash__(self):  # TODO : check if implementation is good - the teacher said we can use str as hash
+        String_state = str(self[0:6]) # do not include turn_num in hashing
+        return hash(String_state)
 
 def find_key_by_value(dictionary, value):
     """ Find key in the dictionary by its specific value and return it if exists else return None """
@@ -25,20 +56,11 @@ def find_key_by_value(dictionary, value):
             return key
     return None
 
-class State(State_tuple):  # state must be hashable - so we need to make it hashable
-    def __hash__(self):  # TODO : check if implementation is good - the teacher said we can use str as hash
-        String_state = str(self)
-        return hash(String_state)
-
-
-
-
-
 class OnePieceProblem(search.Problem):
     """This class implements a medical problem according to problem description file
 
         contain attributes: self.map, self.pirate_ships_names, self.treasures_loc, self.marine_ships_input_route,
-         self.marine_route_cycle, self.base_loc, self.all_actions_names
+         self.marine_route_cycle, self.base_loc, self.all_actions_names.
 
         contain methods: marine_ship_loc_at_t,  actions(self, state: namedtuple), result(self, state, action),
         goal_test(self, state), h, h1, h2
@@ -63,13 +85,13 @@ class OnePieceProblem(search.Problem):
 
                 treasures_on_ships_dict = {}
                 for ship_name in self.pirate_ships_names:
-                    treasures_on_ships_dict.update({ship_name: list([])})
+                    treasures_on_ships_dict.update({ship_name: []})
                 init_state_params.append(treasures_on_ships_dict)  # 'treasures_on_ships_dict'- dict{ ship_name :
                 #                                                   list of treasures_names (at most two treasures) ...}
 
             elif k == "treasures":
                 self.treasures_loc = v
-                init_state_params.append(v)  # uncollected_treasures_loc_dict
+                init_state_params.append(v)  # uncollected_island_loc_dict
                 init_state_params.append(set())  # 'collected_treasures_in_base_names_set'
 
             elif k == "marine_ships":
@@ -87,6 +109,8 @@ class OnePieceProblem(search.Problem):
 
         self.base_loc = list(initial['pirate_ships'].values())[0]
 
+        init_state_params.append(len(init_state_params[2])) # num_not_deposited_treasures
+        init_state_params.append(0) # turn_num
         initial_state = State(*init_state_params)
         search.Problem.__init__(self, initial_state)
 
@@ -109,7 +133,7 @@ class OnePieceProblem(search.Problem):
         cols_num = len(self.map[0])
         return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
 
-    def sail_locations(self, loc, ship_name) : # TODO - make sue check in node if cell contain marine in next timestamp
+    def sail_locations(self, loc, ship_name) :
         """ Returns legal tuple (as described in file)
         of all the near sail actions to locations within the map that this ship can sail to."""
         locations_array = []
@@ -119,7 +143,6 @@ class OnePieceProblem(search.Problem):
                     if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
                         locations_array.append( ("sail", ship_name, (i,j) ) )
         return locations_array
-
 
     def actions(self, state: namedtuple):
         """Returns all the actions that can be executed in the given state.
@@ -134,13 +157,13 @@ class OnePieceProblem(search.Problem):
         for action_command in self.all_actions_names: # check each command
 
             for ship_name, ship_loc in state.pirate_ships_loc_dict.items():
-
+                # each command type require different code
                 if action_command == "collect_treasure":
                     # first check if ship can collect more treasures :
                     ship_treasure_num = len(state.treasures_on_ships_dict.get(ship_name))
                     if ship_treasure_num < 2 :
                         # then check if there is a nearby uncollected treasure and add action as much as there is:
-                        for treasure,treasure_loc in state.uncollected_treasures_loc_dict.items():
+                        for treasure,treasure_loc in state.uncollected_island_loc_dict.items():
                             if ((ship_loc[0]-1) <= treasure_loc[0] ) and ((ship_loc[1]-1) <= treasure_loc[1]
                                 ) and ( treasure_loc[0] <= (ship_loc[0]+1)) and (treasure_loc[1]<=(ship_loc[1]+1)):
                                 actions.append(("collect_treasure", ship_name, treasure)) # add action
@@ -151,9 +174,9 @@ class OnePieceProblem(search.Problem):
                         ship_treasures = state.treasures_on_ships_dict.get(ship_name)
                         there_is_treasure_on_ship = False
                         for treasure in ship_treasures:
-                            if treasure is not None:
+                            if len(treasure) > 0 :
                                 there_is_treasure_on_ship = True
-                        if there_is_treasure_on_ship:  # if there is treasure on ship then deposit it
+                        if there_is_treasure_on_ship:  # if there is this treasure on ship then deposit it
                             actions.append(("deposit_treasures", ship_name)) # add action
 
                 elif action_command == "sail":
@@ -163,19 +186,86 @@ class OnePieceProblem(search.Problem):
                 elif action_command == "wait":
                     actions.append( ("wait", ship_name) ) # add action
 
-        return tuple(actions)
+        return set(actions)
 
     def result(self, state, action): # TODO
         """Return the state that results from executing the given
         action in the given state. The action must be one of
         self.actions(state)."""
-        if action in self.actions(state):
-            pass
+
+        new_turn = state.turn_num + 1 # new turn number
+
+        legal_actions_set = self.actions(state) # all legal actions the current state can do
+
+        if (not (legal_actions_set is None)) and (action in legal_actions_set):
+            action_command  = action[0]
+
+            # check if in the end of turn there will be a marine in ship's location to confiscate the treasure.
+            ships_encountered_marine_list = []
+            new_marine_location_dict = dict()
+            new_treasures_on_ships_dict = state.treasures_on_ships_dict.copy()
+            new_pirate_ships_loc_dict = state.pirate_ships_loc_dict.copy()
+            new_uncollected_islands_loc_dict = state.uncollected_island_loc_dict.copy()
+
+            for marine in state.marine_ships_loc_dict.keys():
+                new_marine_location = self.marine_ship_loc_at_t(marine, new_turn) # loc of marine at end of turn
+                new_marine_location_dict.update({marine: new_marine_location}) # update it
+
+                for ship_name, ship_loc in state.pirate_ships_loc_dict.items(): # check if any ship encountered marine
+                    # if action_command is "sail" then update ship's loc and check encounter in new loc
+                    if action_command == "sail": # action = (“sail”, pirate_ship, (x, y))
+                        new_loc = action[2]
+                        # check new_loc if legal
+                        if self.legal_move(new_loc) and self.map[new_loc[0]][new_loc[1]] in ["B", "S"]:
+                            ship_loc = new_loc
+                            new_pirate_ships_loc_dict.update({ship_name: ship_loc})
+
+                    if new_marine_location == ship_loc:
+                        ships_encountered_marine_list.append(ship_name)
+                        # remark the confiscated treasures as uncollected:
+                        for treasure in new_treasures_on_ships_dict.get(ship_name):
+                            treasure_loc = self.treasures_loc.get(treasure)
+                            new_uncollected_islands_loc_dict.update({treasure: treasure_loc})
+                        # confiscate all treasures in ship encountered marine:
+                        new_treasures_on_ships_dict.update({ship_name:[]})
+
+            # now check the which one is the action_command and return new state according
+            if action_command == "sail": # return the new state
+                new_state = State(new_pirate_ships_loc_dict, new_treasures_on_ships_dict,
+                                  new_uncollected_islands_loc_dict, state.collected_treasures_in_base_names_set,
+                                  new_marine_location_dict, state.num_not_deposited_treasures, new_turn)
+                return new_state
+
+            elif action_command == "collect_treasure": # (“collect_treasure”, pirate_ship, “treasure_name”).
+                ship_name = action[1]
+                # if there is no marine encounter at the end of turn then we can collect it without confiscating
+                if not (ship_name in ships_encountered_marine_list):
+                    ship_treasure_list = state.treasures_on_ships_dict.get(ship_name).copy() # list of ship's treasures
+                    ship_treasure_list.append(action[2]) # add treasure to the list
+                    new_treasures_on_ships_dict.update({ship_name : ship_treasure_list }) # update ship's new list
+                    # remove treasure from uncollected islands
+                    new_uncollected_islands_loc_dict.pop(action[2])
+                return State(new_pirate_ships_loc_dict, new_treasures_on_ships_dict,
+                                      new_uncollected_islands_loc_dict,
+                                      state.collected_treasures_in_base_names_set.copy(),
+                                      new_marine_location_dict, state.num_not_deposited_treasures ,new_turn)
+
+            elif action_command == "deposit_treasures":
+                return #TODO
+
+            elif action_command == "wait":
+                new_state = State(new_pirate_ships_loc_dict, new_treasures_on_ships_dict,
+                                  new_uncollected_islands_loc_dict, state.collected_treasures_in_base_names_set.copy(),
+                                  new_marine_location_dict, state.num_not_deposited_treasures, new_turn)
+                return new_state
+
+        else:
+            return None
 
     def goal_test(self, state):
         """Given a state, checks if this is the goal state.
          Returns True if it is, False otherwise."""
-        return len(state.uncollected_treasures_loc_dict) == 0
+        return state.num_not_deposited_treasures == 0
 
     def h(self, node):  # TODO
         """ This is the heuristic. It gets a node (not a state,
@@ -188,13 +278,12 @@ class OnePieceProblem(search.Problem):
         state can be accessed via node.state)
         and returns a number of uncollected treasures divided by the number of pirates."""
         state = node.state
-        uncollected_treasures_num = len(state.uncollected_treasures_loc_dict)
+        uncollected_treasures_num = state.num_not_deposited_treasures
         pirates_num = len(state.pirate_ships_loc_dict)
         return uncollected_treasures_num/pirates_num
 
     def h_2(self, node): # TODO
-        """ This is the heuristic. It gets a node (not a state,
-        state can be accessed via node.state)
+        """ This is the heuristic. It gets a node (not a state, state can be accessed via node.state)
         Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
          for each treasure, divided by the number of pirates. If there is a treasure which all the adjacent cells are
          islands – return infinity. """
@@ -214,7 +303,7 @@ def main():
                 ['S', 'I', 'S', 'S', 'S'],
                 ['S', 'S', 'S', 'S', 'S'],
                 ['B', 'S', 'S', 'I', 'S']],
-        'pirate_ships': {'pirate_ship_1': (3, 0), 'pirate_ship_2': (3, 0)},
+        'pirate_ships': {'pirate_ship_1': (2, 0), 'pirate_ship_2': (3, 0)},
         'treasures': {'treasure_1': (1, 1), 'treasure_2': (3, 3)},
         'marine_ships': {'marine_1': [(3, 2), (2, 2), (2, 3), (2, 4)]}
     }
@@ -226,8 +315,9 @@ if __name__ == '__main__':
     main()
 
 
-# TODO notes:
+# TODO recheck notes:
 # - sometimes we can move to a loc even if there is marine if we have no treasure on ships.
 # - when collecting a treasure on ship make sure to remove it from uncollected, and if it was forfeited to marines don't
 # forget to add it to uncollected again.
 # - there is node.depth attribute in node which can be used as timestamp
+# - make sure check in node if cell contain marine in next turn
