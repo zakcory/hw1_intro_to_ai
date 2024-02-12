@@ -175,9 +175,7 @@ def astar_search(problem, h=None):
         reachability_check = reachability_check and ex1_342663978_207341785.OnePieceProblem.sail_locations(problem,
                                                                     treasure_loc,"", True)
         if not reachability_check: # if there is unreachable island then h = infinity
-            return infinity
+            return None
 
-    # TODO
     # now implement A*
-
     return best_first_graph_search(problem,f)
