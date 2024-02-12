@@ -243,6 +243,8 @@ class OnePieceProblem(search.Problem):
                         # confiscate all treasures in ship encountered marine:
                         new_treasures_on_ships_dict.update({ship_name:[]})
 
+            num_deposited = 0
+
             # now check the which one is the action_command and return new state according
             if action_command == "collect_treasure": # (“collect_treasure”, pirate_ship, “treasure_name”).
                 # if there is no marine encounter at the end of turn then we can collect it without confiscating
@@ -257,15 +259,17 @@ class OnePieceProblem(search.Problem):
                 # check if ship in base_loc
                 if new_pirate_ships_loc_dict.get(ship_name) == self.base_loc:
                     for treasure_to_deposit in new_treasures_on_ships_dict.get(ship_name):
+                        num_deposited += 1
                         # add all treasures in ship to collected_in_base
                         new_collected_treasures_in_base_names_set.add(treasure_to_deposit)
                         # no need to reduce num_not_deposited_treasures because we will return len(new_collected..._set)
+
 
             # command wait doesn't change any of the other states. command sail already checked
             return State(new_pirate_ships_loc_dict, new_treasures_on_ships_dict,
                                       new_uncollected_islands_loc_dict,
                                       new_collected_treasures_in_base_names_set,
-                                      new_marine_location_dict, len(new_uncollected_islands_loc_dict),
+                                      new_marine_location_dict, state.num_not_deposited_treasures - num_deposited,
                          new_turn)
         else:
             return State(state[0],state[1],state[2],state[3],state[4],state[5],new_turn)
