@@ -15,7 +15,7 @@ import math
 import random
 import sys
 import bisect
-import ex1_342663978_207341785
+# import ex1_342663978_207341785
 infinity = float('inf')
 
 # ______________________________________________________________________________
@@ -170,9 +170,9 @@ def astar_search(problem, h=None):
     # TODO: Implement the rest of the A* search algorithm
     # if there is a treasure island that is unreachable then return None , check that first!!
     reachability_check = True
-    all_treasures_loc = ex1_342663978_207341785.OnePieceProblem.get_treasures_loc(problem)
+    all_treasures_loc = problem.get_treasures_loc(problem)
     for treasure_loc in all_treasures_loc.values():
-        reachability_check = reachability_check and ex1_342663978_207341785.OnePieceProblem.sail_locations(problem,
+        reachability_check = reachability_check and problem.sail_locations(
                                                                     treasure_loc,"", True)
         if not reachability_check: # if there is unreachable island then h = infinity
             return None
