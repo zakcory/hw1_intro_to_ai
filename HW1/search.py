@@ -174,7 +174,6 @@ def astar_search(problem, h=None):
     # Memoize this function for better performance
     f = memoize(lambda n: n.path_cost + h(n), 'f')
 
-    # TODO: Implement the rest of the A* search algorithm
     # if there is a treasure island that is unreachable then return None , check that first!!
     reachability_check = True
     all_treasures_loc = problem.get_treasures_loc()

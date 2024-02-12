@@ -61,7 +61,7 @@ def solve_problems(problems):
             print("Error creating problem: ", e)
             return None
         # timeout = 60000000
-        timeout = 6000
+        timeout = 60
 
         result = check_problem(
             p, (lambda p: search.astar_search(p, p.h)), timeout)
