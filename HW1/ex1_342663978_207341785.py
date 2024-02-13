@@ -378,4 +378,5 @@ def create_onepiece_problem(game):
 # forget to add it to uncollected again.
 # - there is node.depth attribute in node which can be used as timestamp
 # - make sure check in node if cell contain marine in next turn
+# - make sure to check the funstion names are correct
 # TODO : the actions are atomic - relate to just one ship
