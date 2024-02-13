@@ -51,12 +51,6 @@ class State(State_tuple):  # state must be hashable - so we need to make it hash
         # print("in hash",self,"  ", hash(String_state))
         return hash(String_state)
 
-def find_key_by_value(dictionary, value):
-    """ Find key in the dictionary by its specific value and return it if exists else return None """
-    for key, val in dictionary.items():
-        if val == value:
-            return key
-    return None
 
 class OnePieceProblem(search.Problem):
     """This class implements a medical problem according to problem description file
@@ -174,6 +168,7 @@ class OnePieceProblem(search.Problem):
                             if ((ship_loc[0]-1) <= treasure_loc[0] ) and ((ship_loc[1]-1) <= treasure_loc[1]
                                 ) and ( treasure_loc[0] <= (ship_loc[0]+1)) and (treasure_loc[1]<=(ship_loc[1]+1)):
                                 actions.append(("collect_treasure", ship_name, treasure)) # add action
+                            # allows to collect treasures on the diagonal - (-1, -1) or (1,1) from the ship which is not legal (?)
 
                 elif action_command == "deposit_treasures":
                     # Check if the ship is at the base (deposit available)
@@ -183,12 +178,13 @@ class OnePieceProblem(search.Problem):
                         for treasure in ship_treasures:
                             if len(treasure) > 0 :
                                 there_is_treasure_on_ship = True
-                        if there_is_treasure_on_ship:  # if there is this treasure on ship then deposit it
+                        if there_is_treasure_on_ship:  # if there is any treasure on ship then deposit all
                             actions.append(("deposit_treasures", ship_name)) # add action
 
                 elif action_command == "sail":
                     all_sail_locations = self.sail_locations(ship_loc,ship_name)
                     actions.extend(all_sail_locations) # add list of actions
+                    
 
                 elif action_command == "wait":
                     actions.append( ("wait", ship_name) ) # add action
@@ -290,7 +286,7 @@ class OnePieceProblem(search.Problem):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
-        return self.h_1(node)
+        return self.h_2(node)
 
     def h_1(self, node):
         """ This is the heuristic. It gets a node (not a state,
@@ -302,17 +298,50 @@ class OnePieceProblem(search.Problem):
         # print(node.state,"h_1 ", uncollected_treasures_num/pirates_num)
 
         return uncollected_treasures_num/pirates_num
-
-    def h_2(self, node): # TODO
+# print the names of all ships
+# print the names of all treasures
+    
+    def h_2(self, node): # I almost finished this function, still doesnt work
         """ This is the heuristic. It gets a node (not a state, state can be accessed via node.state)
         Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
          for each treasure, divided by the number of pirates. If there is a treasure which all the adjacent cells are
          islands – return infinity. """
+        
+        def distance(loc1, loc2):
+            """Returns the Manhattan distance between two locations"""
+            return abs(loc1[0] - loc2[0]) + abs(loc1[1] - loc2[1])
+        
+        def surrounded_by_islands(treasure_loc):
+            """Returns True if the treasure is surrounded by islands, False otherwise"""
+            row = treasure_loc[0]
+            col = treasure_loc[1]
+            for (i, j) in [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]:
+                if self.legal_move((i, j)) and self.map[i][j] == 'S':
+                    return False
+            return True
+        
         state = node.state
-
-        pirates_num = len(state.pirate_ships_loc_dict)
-
-        return 0
+        # Merge the uncollected treasures and the treasures on the ships (treasures that are not on the base)
+        islands_treasures = list(state.uncollected_island_loc_dict.values())
+        ships_treasures = [loc for loc in (treasure for treasure in state.treasures_on_ships_dict.values() if len(treasure) > 0)]
+        treasures_not_on_base = islands_treasures + ships_treasures
+        print(treasures_not_on_base)
+        sum = 0
+        # If a treasure is at base, it doesn't have an affect on the sum
+        for treasure_loc in treasures_not_on_base:
+            
+            if surrounded_by_islands(treasure_loc):
+                return math.inf
+            else:
+                min_distance = math.inf
+                for (i, j) in [(treasure_loc[0] - 1, treasure_loc[1]), (treasure_loc[0] + 1, treasure_loc[1]),
+                               (treasure_loc[0], treasure_loc[1] - 1), (treasure_loc[0], treasure_loc[1] + 1)]:
+                    # Finding the sea cell that's closest to the base
+                    if self.legal_move((i, j)) and self.map[i][j] == 'S':
+                        min_distance = min(min_distance, distance(self.base_loc, (i, j)))
+                sum += min_distance
+                
+        return sum / (len(treasures_not_on_base) + len(state.collected_treasures_in_base_names_set))
 
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
@@ -334,23 +363,7 @@ def create_onepiece_problem(game):
     return OnePieceProblem(game)
 
 
-def main():
-    test = {
-        'map': [['S', 'S', 'S', 'S', 'I'],
-                ['S', 'I', 'S', 'S', 'S'],
-                ['S', 'S', 'S', 'S', 'S'],
-                ['B', 'S', 'S', 'I', 'S']],
-        'pirate_ships': {'pirate_ship_1': (2, 0), 'pirate_ship_2': (3, 0)},
-        'treasures': {'treasure_1': (1, 1), 'treasure_2': (3, 3)},
-        'marine_ships': {'marine_1': [(3, 2), (2, 2), (2, 3), (2, 4)]}
-    }
-    pr = OnePieceProblem(test)
-    print(pr.actions(pr.initial))
 
-
-
-if __name__ == '__main__':
-    main()
 
 
 # TODO recheck notes:
