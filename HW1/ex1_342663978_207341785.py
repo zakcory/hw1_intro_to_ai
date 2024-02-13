@@ -130,17 +130,22 @@ class OnePieceProblem(search.Problem):
         return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
 
     def sail_locations(self, loc, ship_name, just_check_reachability = False) :
-        """ Returns legal tuple (as described in file)
+        """ If we check reachability: Returns array of tuples of locations reachable from loc.
+        Else if we check sail location from loc : return array of tuples ("sail", ship_name, sail_loc)
         of all the near sail actions to locations within the map that this ship can sail to."""
         locations_array = []
         row = loc[0]
         col = loc[1]
-        for (i,j) in [(row-1,col), (row+1,col), (row,col-1), (row,col+1)]:
+        adjacent_locations = [(row-1,col), (row+1,col), (row,col-1), (row,col+1)]
+        if just_check_reachability : # in reachability, we check all near locations
+            adjacent_locations.extend([(row-1,col-1), (row+1,col-1), (row-1,col+1), (row+1,col+1)])
+        for (i,j) in adjacent_locations:
             if self.legal_move((i,j)):
                 if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
                     if just_check_reachability:
-                        return True
-                    locations_array.append( ("sail", ship_name, (i,j) ) )
+                        locations_array.append((i,j))
+                    else:
+                        locations_array.append( ("sail", ship_name, (i,j) ) )
         return locations_array
 
     def actions(self, state: namedtuple):
@@ -241,7 +246,7 @@ class OnePieceProblem(search.Problem):
                 new_pirate_loc = single_action_syntax[2]
                 new_pirate_ships_loc_dict.update({action_ship_name: new_pirate_loc})
 
-            # TODO : check Question: can marine be at base? include case anyway
+            # check Question: can marine be at base? include case anyway
             if action_command == "deposit_treasures":  # action = (“deposit_treasures”, “pirate_ship”)
                 # check if ship in base_loc
                 base_loc = self.base_loc
@@ -279,6 +284,18 @@ class OnePieceProblem(search.Problem):
         test_flag = state.num_not_deposited_treasures == 0
         return test_flag
 
+    def island_reachability_check(self):
+        # if there is a treasure island that is unreachable then return None , check that first!!
+        treasure_reachable_near_loc_dict = dict()
+        all_treasures_loc = self.get_treasures_loc()
+        for treasure,treasure_loc in all_treasures_loc.items():
+            reachable_loc =  self.sail_locations( treasure_loc, "",True)
+            treasure_reachable_near_loc_dict[treasure] = reachable_loc
+            if not reachable_loc:  # if there is unreachable island then h = infinity
+                # print("unreachable")
+                return False
+        return treasure_reachable_near_loc_dict
+
     def h(self, node):  # TODO
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
@@ -295,8 +312,7 @@ class OnePieceProblem(search.Problem):
         # print(node.state,"h_1 ", uncollected_treasures_num/pirates_num)
 
         return uncollected_treasures_num/pirates_num
-# print the names of all ships
-# print the names of all treasures
+
 
     def h_2(self, node): # I almost finished this function, still doesnt work
         """ This is the heuristic. It gets a node (not a state, state can be accessed via node.state)

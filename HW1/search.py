@@ -174,15 +174,5 @@ def astar_search(problem, h=None):
     # Memoize this function for better performance
     f = memoize(lambda n: n.path_cost + h(n), 'f')
 
-    # if there is a treasure island that is unreachable then return None , check that first!!
-    reachability_check = True
-    all_treasures_loc = problem.get_treasures_loc()
-    for treasure_loc in all_treasures_loc.values():
-        reachability_check = reachability_check and problem.sail_locations(
-                                                                    treasure_loc,"", True)
-        if not reachability_check: # if there is unreachable island then h = infinity
-            # print("unreachable")
-            return None
-
     # now implement A*
     return best_first_graph_search(problem,f)
