@@ -15,7 +15,6 @@ import math
 import random
 import sys
 import bisect
-# import ex1_342663978_207341785
 infinity = float('inf')
 
 # ______________________________________________________________________________
@@ -155,7 +154,6 @@ def graph_search(problem, fringe):
             closed[node.state] = True
             fringe.extend(node.expand(problem))
             distance_set[node.state] = g_n
-
             if problem.goal_test(node.state):
                 return node
     return None

@@ -60,9 +60,7 @@ def solve_problems(problems):
         except Exception as e:
             print("Error creating problem: ", e)
             return None
-        # timeout = 60000000
         timeout = 60
-
         result = check_problem(
             p, (lambda p: search.astar_search(p, p.h)), timeout)
         print("A* ", result)
@@ -195,7 +193,6 @@ def main():
     'treasures': {'treasure_1': (2, 2), 'treasure_2': (2, 2), 'treasure_3': (2, 2), 'treasure_4': (2, 2)},
     'marine_ships': {'marine_1': [(0, 0), (0, 1), (0, 0), (1, 0), (2,0)]}
     },
-
     ]
 
     solve_problems(problems)

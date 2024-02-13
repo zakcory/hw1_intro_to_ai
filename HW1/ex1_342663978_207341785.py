@@ -110,6 +110,17 @@ class OnePieceProblem(search.Problem):
         initial_state = State(*init_state_params)
         search.Problem.__init__(self, initial_state)
 
+    def get_map(self):
+        return self.map
+    def get_pirate_ships_names(self):
+        return self.pirate_ships_names
+    def get_treasures_loc(self):
+        return self.treasures_loc
+    def get_marine_route_cycle(self):
+        return self.marine_route_cycle
+    def get_base_loc(self):
+        return self.base_loc
+
     def marine_ship_loc_at_t(self, marine_ship_name: str, timestamp: int):
         """ Returns the location of the marine_ship_name at given timestamp"""
         cycle_route = list(self.marine_route_cycle.get(marine_ship_name))
@@ -146,6 +157,7 @@ class OnePieceProblem(search.Problem):
                         locations_array.append((i,j))
                     else:
                         locations_array.append( ("sail", ship_name, (i,j) ) )
+
         return locations_array
 
     def actions(self, state: namedtuple):
@@ -284,14 +296,18 @@ class OnePieceProblem(search.Problem):
         test_flag = state.num_not_deposited_treasures == 0
         return test_flag
 
-    def island_reachability_check(self):
+    def islands_reachable_locations(self):
+        """ check if all treasure island are reachable.
+            returns tuple treasure_reachable_near_loc_dict if all treasure island are reachable,
+             False otherwise
+         """
         # if there is a treasure island that is unreachable then return None , check that first!!
         treasure_reachable_near_loc_dict = dict()
-        all_treasures_loc = self.get_treasures_loc()
+        all_treasures_loc = self.treasures_loc
         for treasure,treasure_loc in all_treasures_loc.items():
             reachable_loc =  self.sail_locations( treasure_loc, "",True)
             treasure_reachable_near_loc_dict[treasure] = reachable_loc
-            if not reachable_loc:  # if there is unreachable island then h = infinity
+            if not reachable_loc:  # if there is unreachable island then return false
                 # print("unreachable")
                 return False
         return treasure_reachable_near_loc_dict
@@ -300,7 +316,7 @@ class OnePieceProblem(search.Problem):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
-        return self.h_1(node)
+        return self.h_2(node)
 
     def h_1(self, node):
         """ This is the heuristic. It gets a node (not a state,
@@ -313,7 +329,6 @@ class OnePieceProblem(search.Problem):
 
         return uncollected_treasures_num/pirates_num
 
-
     def h_2(self, node): # I almost finished this function, still doesnt work
         """ This is the heuristic. It gets a node (not a state, state can be accessed via node.state)
         Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
@@ -324,56 +339,49 @@ class OnePieceProblem(search.Problem):
             """Returns the Manhattan distance between two locations"""
             return abs(loc1[0] - loc2[0]) + abs(loc1[1] - loc2[1])
 
-        def surrounded_by_islands(treasure_loc): # TODO - there is similar check in A* - we should delete it later
-            """Returns True if the treasure is surrounded by islands, False otherwise"""
-            row = treasure_loc[0]
-            col = treasure_loc[1]
-            for (i, j) in [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]:
-                if self.legal_move((i, j)) and self.map[i][j] in ['S',"B"]:
-                    return False
-            return True
+        all_treasures_near_reachable_loc = self.islands_reachable_locations()
+        if not all_treasures_near_reachable_loc: # the func islands_reachable_locations() return False if unreachable
+            return float('inf')
 
-        state = node.state
-        # Merge the uncollected treasures and the treasures on the ships (treasures that are not on the base)
-        islands_treasures = list(state.uncollected_island_loc_dict.values())
-        ships_treasures = [loc for loc in (treasure for treasure in state.treasures_on_ships_dict.values() if len(treasure) > 0)]
-        treasures_not_on_base = islands_treasures + ships_treasures
-        print(treasures_not_on_base)
-        sum = 0
-        # If a treasure is at base, it doesn't have an affect on the sum
-        for treasure_loc in treasures_not_on_base:
+        else:
+            state = node.state
 
-            if surrounded_by_islands(treasure_loc):
-                return math.inf
-            else:
-                min_distance = math.inf
-                for (i, j) in [(treasure_loc[0] - 1, treasure_loc[1]), (treasure_loc[0] + 1, treasure_loc[1]),
-                               (treasure_loc[0], treasure_loc[1] - 1), (treasure_loc[0], treasure_loc[1] + 1)]:
-                    # Finding the sea cell that's closest to the base
-                    if self.legal_move((i, j)) and self.map[i][j] == 'S':
-                        min_distance = min(min_distance, distance(self.base_loc, (i, j)))
-                sum += min_distance
+            treasures_not_on_base = dict()
 
-        return sum / (len(treasures_not_on_base) + len(state.collected_treasures_in_base_names_set))
+            # ships_treasure_loc = [ "ship_loc", ...]
+            ships_treasure_loc =  []
+            for ship_name, treasures_in_ship in state.treasures_on_ships_dict.items():
+                if treasures_in_ship:
+                    ship_loc = state.pirate_ships_loc_dict.get(ship_name)
+                    for treasure in treasures_in_ship:
+                        ships_treasure_loc.append(ship_loc)
+                        treasures_not_on_base[treasure] = ship_loc
+
+            # If a treasure is at base, it doesn't have an effect on the sum
+            distances_sum = 0
+            # we want distance_sum of treasures on ships
+            # and distance_sum of uncollected treasures, don't forget to add them to treasures_not_on_base,
+            # so we can merge them
+            treasures_not_on_base.update(state.uncollected_island_loc_dict)
+
+            for treasure,treasure_loc in treasures_not_on_base.items():
+                min_distance = float('inf')
+                # Finding the legal sea cell that's closest to the base
+                nearby_loc = self.sail_locations(treasure_loc, "", True)
+                for (i, j) in nearby_loc:
+                    min_distance = min(min_distance, distance(self.base_loc, (i, j)))
+
+                distances_sum += min_distance
+
+        return distances_sum / len(state.pirate_ships_loc_dict.keys())
 
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
 
-    def get_map(self):
-        return self.map
-    def get_pirate_ships_names(self):
-        return self.pirate_ships_names
-    def get_treasures_loc(self):
-        return self.treasures_loc
 
-    def get_marine_route_cycle(self):
-        return self.marine_route_cycle
-    def get_base_loc(self):
-        return self.base_loc
 
 def create_onepiece_problem(game):
     return OnePieceProblem(game)
-
 
 def main():
     test = {
