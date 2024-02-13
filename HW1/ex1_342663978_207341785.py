@@ -308,12 +308,12 @@ class OnePieceProblem(search.Problem):
             """Returns the Manhattan distance between two locations"""
             return abs(loc1[0] - loc2[0]) + abs(loc1[1] - loc2[1])
 
-        def surrounded_by_islands(treasure_loc):
+        def surrounded_by_islands(treasure_loc): # TODO - there is similar check in A* - we should delete it later
             """Returns True if the treasure is surrounded by islands, False otherwise"""
             row = treasure_loc[0]
             col = treasure_loc[1]
             for (i, j) in [(row - 1, col), (row + 1, col), (row, col - 1), (row, col + 1)]:
-                if self.legal_move((i, j)) and self.map[i][j] == 'S':
+                if self.legal_move((i, j)) and self.map[i][j] in ['S',"B"]:
                     return False
             return True
 
