@@ -147,9 +147,7 @@ class OnePieceProblem(search.Problem):
         locations_array = []
         row = loc[0]
         col = loc[1]
-        adjacent_locations = [(row-1,col), (row+1,col), (row,col-1), (row,col+1)]
-        if just_check_reachability : # in reachability, we check all near locations
-            adjacent_locations.extend([(row-1,col-1), (row+1,col-1), (row-1,col+1), (row+1,col+1)])
+        adjacent_locations = [(row-1,col), (row+1,col), (row,col-1), (row,col+1)] # even if just check reachability, still avoid diagonal moves
         for (i,j) in adjacent_locations:
             if self.legal_move((i,j)):
                 if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
@@ -179,9 +177,19 @@ class OnePieceProblem(search.Problem):
                     if ship_treasure_num < 2 :
                         # then check if there is a nearby uncollected treasure and add action as much as there is:
                         for treasure,treasure_loc in state.uncollected_island_loc_dict.items():
-                            if ((ship_loc[0]-1) <= treasure_loc[0] ) and ((ship_loc[1]-1) <= treasure_loc[1]
-                                ) and ( treasure_loc[0] <= (ship_loc[0]+1)) and (treasure_loc[1]<=(ship_loc[1]+1)):
-                                ship_actions.append(("collect_treasure", ship_name, treasure)) # add action
+                            # getting coordinates of the treasure and the ship
+                            treasure_x_coordinate = treasure_loc[0]
+                            treasure_y_coordinate = treasure_loc[1]
+                            ship_x_coordinate = ship_loc[0]
+                            ship_y_coordinate = ship_loc[1]
+                            # check if the treasure is reachable from the ship, avoid diagonal moves
+                            reachable_from_ship = [(ship_x_coordinate-1, ship_y_coordinate), (ship_x_coordinate+1, ship_y_coordinate),
+                                                   (ship_x_coordinate, ship_y_coordinate-1), (ship_x_coordinate, ship_y_coordinate+1)]
+                            
+                            for (i,j) in reachable_from_ship:
+                                if self.legal_move((i,j)):
+                                    if (treasure_x_coordinate == i) and (treasure_y_coordinate == j):
+                                        ship_actions.append(("collect_treasure", ship_name, treasure)) # add action
 
                 elif action_command == "deposit_treasures":
                     # Check if the ship is at the base (deposit available)
@@ -305,7 +313,7 @@ class OnePieceProblem(search.Problem):
         treasure_reachable_near_loc_dict = dict()
         all_treasures_loc = self.treasures_loc
         for treasure,treasure_loc in all_treasures_loc.items():
-            reachable_loc =  self.sail_locations( treasure_loc, "",True)
+            reachable_loc =  self.sail_locations(treasure_loc, "",True)
             treasure_reachable_near_loc_dict[treasure] = reachable_loc
             if not reachable_loc:  # if there is unreachable island then return false
                 # print("unreachable")
