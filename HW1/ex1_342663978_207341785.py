@@ -358,15 +358,11 @@ class OnePieceProblem(search.Problem):
 
             treasures_not_on_base = dict()
 
-            # ships_treasure_loc = [ "ship_loc", ...]
-            ships_treasure_loc =  []
             for ship_name, treasures_in_ship in state.treasures_on_ships_dict.items():
                 if treasures_in_ship:
                     ship_loc = state.pirate_ships_loc_dict.get(ship_name)
                     for treasure in treasures_in_ship:
-                        ship_near_loc = self.sail_locations(ship_loc,"",True)
-                        ships_treasure_loc.append(ship_near_loc) # add all near locations not
-                        treasures_not_on_base[treasure] = ship_near_loc
+                        treasures_not_on_base[treasure] = ship_loc
 
             # If a treasure is at base, it doesn't have an effect on the sum
             distances_sum = 0
