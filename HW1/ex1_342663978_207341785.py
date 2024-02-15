@@ -179,7 +179,8 @@ class OnePieceProblem(search.Problem):
                     if ship_treasure_num < 2 :
                         # then check if there is a nearby treasure and add action as much as there is:
                         for treasure,treasure_loc in self.treasures_loc.items():
-                            if treasure not in treasures_on_ship:
+                            if (treasure not in treasures_on_ship and
+                                    treasure not in state.collected_treasures_in_base_names_set):
                                 # getting coordinates of the treasure and the ship
                                 treasure_x_coordinate = treasure_loc[0]
                                 treasure_y_coordinate = treasure_loc[1]
@@ -326,7 +327,7 @@ class OnePieceProblem(search.Problem):
         """ This is the heuristic. It gets a node (not a state,
         state can be accessed via node.state)
         and returns a goal distance estimate"""
-        return self.h_3(node)
+        return self.h_2(node)
 
     def h_1(self, node):
         """ This is the heuristic. It gets a node (not a state,
