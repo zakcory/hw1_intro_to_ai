@@ -189,10 +189,10 @@ def main():
                 ['S', 'B', 'S', 'S'],
                 ['S', 'S', 'I', 'I'],
                 ['S', 'S', 'I', 'I']],
-    'pirate_ships': {'pirate_ship_1': (1, 1), 'pirate_ship_2': (1,1)},
-    'treasures': {'treasure_1': (2, 2), 'treasure_2': (2, 2), 'treasure_3': (2, 2), 'treasure_4': (2, 2)},
-    'marine_ships': {'marine_1': [(0, 0), (0, 1), (0, 0), (1, 0), (2,0)]}
-    },
+        'pirate_ships': {'pirate_ship_1': (1, 1), 'pirate_ship_2': (1,1)},
+        'treasures': {'treasure_1': (2, 2), 'treasure_2': (2, 2), 'treasure_3': (2, 2), 'treasure_4': (2, 2)},
+        'marine_ships': {'marine_1': [(0, 0), (0, 1), (0, 0), (1, 0), (2,0)]}
+        }
     ]
 
     solve_problems(problems)

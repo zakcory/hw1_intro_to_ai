@@ -140,18 +140,19 @@ class OnePieceProblem(search.Problem):
         cols_num = len(self.map[0])
         return (0 <= location[0] < rows_num) and (0 <= location[1] < cols_num)
 
-    def sail_locations(self, loc, ship_name, just_check_reachability = False) :
+    def sail_locations(self, loc, ship_name, reachability_check = False) :
         """ If we check reachability: Returns array of tuples of locations reachable from loc.
         Else if we check sail location from loc : return array of tuples ("sail", ship_name, sail_loc)
         of all the near sail actions to locations within the map that this ship can sail to."""
         locations_array = []
         row = loc[0]
         col = loc[1]
-        adjacent_locations = [(row-1,col), (row+1,col), (row,col-1), (row,col+1)] # even if just check reachability, still avoid diagonal moves
+        # even if just check reachability, still avoid diagonal moves
+        adjacent_locations = [(row-1,col), (row+1,col), (row,col-1), (row,col+1)]
         for (i,j) in adjacent_locations:
             if self.legal_move((i,j)):
                 if self.map[i][j] in ["B","S"]: # we can sail to just B-base and S-sea
-                    if just_check_reachability:
+                    if reachability_check:
                         locations_array.append((i,j))
                     else:
                         locations_array.append( ("sail", ship_name, (i,j) ) )
@@ -173,23 +174,27 @@ class OnePieceProblem(search.Problem):
                 # each command type require different code
                 if action_command == "collect_treasure":
                     # first check if ship can collect more treasures :
-                    ship_treasure_num = len(state.treasures_on_ships_dict.get(ship_name))
+                    treasures_on_ship =state.treasures_on_ships_dict.get(ship_name)
+                    ship_treasure_num = len(treasures_on_ship)
                     if ship_treasure_num < 2 :
-                        # then check if there is a nearby uncollected treasure and add action as much as there is:
-                        for treasure,treasure_loc in state.uncollected_island_loc_dict.items():
-                            # getting coordinates of the treasure and the ship
-                            treasure_x_coordinate = treasure_loc[0]
-                            treasure_y_coordinate = treasure_loc[1]
-                            ship_x_coordinate = ship_loc[0]
-                            ship_y_coordinate = ship_loc[1]
-                            # check if the treasure is reachable from the ship, avoid diagonal moves
-                            reachable_from_ship = [(ship_x_coordinate-1, ship_y_coordinate), (ship_x_coordinate+1, ship_y_coordinate),
-                                                   (ship_x_coordinate, ship_y_coordinate-1), (ship_x_coordinate, ship_y_coordinate+1)]
-                            
-                            for (i,j) in reachable_from_ship:
-                                if self.legal_move((i,j)):
-                                    if (treasure_x_coordinate == i) and (treasure_y_coordinate == j):
-                                        ship_actions.append(("collect_treasure", ship_name, treasure)) # add action
+                        # then check if there is a nearby treasure and add action as much as there is:
+                        for treasure,treasure_loc in self.treasures_loc.items():
+                            if treasure not in treasures_on_ship:
+                                # getting coordinates of the treasure and the ship
+                                treasure_x_coordinate = treasure_loc[0]
+                                treasure_y_coordinate = treasure_loc[1]
+                                ship_x_coordinate = ship_loc[0]
+                                ship_y_coordinate = ship_loc[1]
+                                # check if the treasure is reachable from the ship, avoid diagonal moves
+                                reachable_from_ship = [(ship_x_coordinate-1, ship_y_coordinate),
+                                                       (ship_x_coordinate+1, ship_y_coordinate),
+                                                       (ship_x_coordinate, ship_y_coordinate-1),
+                                                       (ship_x_coordinate, ship_y_coordinate+1)]
+
+                                for (i,j) in reachable_from_ship:
+                                    if self.legal_move((i,j)):
+                                        if (treasure_x_coordinate == i) and (treasure_y_coordinate == j):
+                                            ship_actions.append(("collect_treasure", ship_name, treasure)) # add action
 
                 elif action_command == "deposit_treasures":
                     # Check if the ship is at the base (deposit available)
@@ -226,9 +231,6 @@ class OnePieceProblem(search.Problem):
         """Return the state that results from executing the given
         action in the given state. The action must be one of
         self.actions(state)."""
-
-        # if state.turn_num == 6 : # breakpoint for check purpose
-        #     breakPoint = False
 
         new_turn = state.turn_num + 1
 
@@ -337,7 +339,7 @@ class OnePieceProblem(search.Problem):
 
         return uncollected_treasures_num/pirates_num
 
-    def h_2(self, node): # I almost finished this function, still doesnt work
+    def h_2(self, node):
         """ This is the heuristic. It gets a node (not a state, state can be accessed via node.state)
         Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
          for each treasure, divided by the number of pirates. If there is a treasure which all the adjacent cells are
@@ -362,8 +364,9 @@ class OnePieceProblem(search.Problem):
                 if treasures_in_ship:
                     ship_loc = state.pirate_ships_loc_dict.get(ship_name)
                     for treasure in treasures_in_ship:
-                        ships_treasure_loc.append(ship_loc)
-                        treasures_not_on_base[treasure] = ship_loc
+                        ship_near_loc = self.sail_locations(ship_loc,"",True)
+                        ships_treasure_loc.append(ship_near_loc) # add all near locations not
+                        treasures_not_on_base[treasure] = ship_near_loc
 
             # If a treasure is at base, it doesn't have an effect on the sum
             distances_sum = 0
@@ -386,10 +389,9 @@ class OnePieceProblem(search.Problem):
     """Feel free to add your own functions
     (-2, -2, None) means there was a timeout"""
 
-    def h_3(self, node): # I almost finished this function, still doesnt work
+    def h_3(self, node): # I almost finished this function, still doesn't work
         """ This is the heuristic. It gets a node (not a state, state can be accessed via node.state)
-        Returns a Sum of the distances from the pirate base to the closest sea cell adjacent to a treasure -
-         for each treasure, divided by the number of pirates. If there is a treasure which all the adjacent cells are
+        Returns _____. If there is a treasure which all the adjacent cells are
          islands – return infinity. """
 
         def distance(loc1, loc2):
@@ -456,11 +458,3 @@ if __name__ == '__main__':
     main()
 
 
-# TODO recheck notes:
-# - sometimes we can move to a loc even if there is marine if we have no treasure on ships.
-# - when collecting a treasure on ship make sure to remove it from uncollected, and if it was forfeited to marines don't
-# forget to add it to uncollected again.
-# - there is node.depth attribute in node which can be used as timestamp
-# - make sure check in node if cell contain marine in next turn
-# check if in the end of turn there will be a marine in ship's location to confiscate the treasure.
-# the actions are atomic
